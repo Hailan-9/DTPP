@@ -1,7 +1,13 @@
+# 这段代码是一个自动驾驶仿真评估框架的核心部分，主要功能包括场景设置、指标评估和结果存储。
+# 它使用了 NuPlan 库来评估自动驾驶模型的性能，定义了一些指标（如舒适性、速度合规性等）和场景过滤器来选择不同的测试场景
 import time
 import pathlib
+# 用于数据处理和存储（如将结果保存为 .parquet 文件格式）。
 import pandas as pd
-
+# MetricsEngine：用于计算和管理指标。
+# get_pacifica_parameters：获取车辆参数（如尺寸、轴距等）。
+# WeightedAverageMetricAggregator：用于加权汇总多个指标。
+# 各种指标模块
 from nuplan.planning.metrics.metric_engine import MetricsEngine
 from nuplan.common.actor_state.vehicle_parameters import get_pacifica_parameters
 from nuplan.planning.metrics.aggregator.weighted_average_metric_aggregator import WeightedAverageMetricAggregator
@@ -42,6 +48,7 @@ MAX_LEN = 120 # [m] max length of the path
 
 
 ### Simulation setting
+# 将仿真运行的报告保存为 .parquet 文件
 def save_runner_reports(reports, output_dir, report_name):
     """
     Save runner reports to a parquet file in the output directory.
@@ -50,10 +57,13 @@ def save_runner_reports(reports, output_dir, report_name):
     :param report_name: Report name.
     """
     report_dicts = []
-
+    # TODO
+    # 使用 map 函数和 lambda 表达式将 reports 列表中的每个报告对象转换为其内部的 __dict__（即对象的属性字典）。
     for report in map(lambda x: x.__dict__, reports):  # type: ignore
+        # 使用海象运算符 :=（Python 3.8+）在 if 语句中为 planner_report 赋值，并检查它是否不为 None。
         if (planner_report := report["planner_report"]) is not None:
             planner_report_statistics = planner_report.compute_summary_statistics()
+            # 从 report 字典中删除 planner_report 属性，避免将其作为对象保存到Parquet文件中，而是替换为统计数据。
             del report["planner_report"]
             report.update(planner_report_statistics)
         report_dicts.append(report)
@@ -77,6 +87,7 @@ def build_metrics_aggregators(experiment, output_dir, aggregator_metric_dir):
     aggregator_save_path = pathlib.Path(aggregator_save_path)
 
     metric_aggregators = []
+    # 获取实验的聚合器配置。
     metric_aggregator_config = get_aggregator_config(experiment)
 
     if not aggregator_save_path.exists():
@@ -87,12 +98,14 @@ def build_metrics_aggregators(experiment, output_dir, aggregator_metric_dir):
     file_name = metric_aggregator_config[2]
     multiple_metrics = metric_aggregator_config[3]
     metric_aggregators.append(WeightedAverageMetricAggregator(name, metric_weights, file_name, aggregator_save_path, multiple_metrics))
-
+    # 返回构建好的指标聚合器。
     return metric_aggregators
 
-
+# 根据实验类型返回指标聚合器的配置。
 def get_aggregator_config(experiment):
+    # 实验分成了三种情况 开环 闭环不反应式 闭环反应式
     if experiment == 'open_loop_boxes':
+        # 指标权重偏向于规划器与专家参考轨迹的误差。
         name = 'open_loop_boxes_weighted_average'
         metric_weights = {'planner_expert_average_l2_error_within_bound': 1, 
                           'planner_expert_average_heading_error_within_bound': 2,
@@ -104,6 +117,7 @@ def get_aggregator_config(experiment):
         challenge_name = 'open_loop_boxes'
 
     elif experiment == 'closed_loop_nonreactive_agents':
+        # 权重偏向于进度、碰撞时间、速度合规性等。
         name = 'closed_loop_nonreactive_agents_weighted_average'
         metric_weights = {'ego_progress_along_expert_route': 5.0,
                           'time_to_collision_within_bound': 5.0,
@@ -132,8 +146,12 @@ def get_aggregator_config(experiment):
 
     return name, metric_weights, file_name, multiple_metrics, challenge_name
 
-
+# 获得场景映射
+# Dictionary with scenario name/type as keys and values
+# tuples of (scenario duration, extraction offset, subsample ratio) as values.
 def get_scenario_map():
+    # 字典 key value pair
+    # 每个场景对应一个 [15.0, -3.0] 的参数列表
     scenario_map = {
         'accelerating_at_crosswalk': [15.0, -3.0],
         'accelerating_at_stop_sign': [15.0, -3.0],
@@ -212,8 +230,10 @@ def get_scenario_map():
 
     return scenario_map
 
-
+# 定义场景过滤器，用于选择测试的场景类型和数量。
+# 这是一个参数，用于指定每种类型的场景数量。None 表示这个参数是可选的，如果没有提供，它将保持 None。
 def get_filter_parameters(num_scenarios_per_type=None, limit_total_scenarios=None):
+    # 本算法使用到的场景类型列表（如左转、右转、车道变更等）。
     scenario_types = [
         'starting_left_turn',
         'starting_right_turn',
@@ -230,7 +250,7 @@ def get_filter_parameters(num_scenarios_per_type=None, limit_total_scenarios=Non
         'changing_lane',
         'following_lane_with_lead',
     ]
-
+    # None：在Python中，None 是一个特殊的常量，用来表示空值或没有值。它通常用于初始化变量，表示该变量尚未被赋予一个具体的值，或者在某些情况下，用来表示一个变量的值应该是空的。
     scenario_tokens = None              # List of scenario tokens to include
     log_names = None                     # Filter scenarios by log names
     map_names = None                     # Filter scenarios by map names
@@ -251,7 +271,9 @@ def get_filter_parameters(num_scenarios_per_type=None, limit_total_scenarios=Non
     return scenario_types, scenario_tokens, log_names, map_names, num_scenarios_per_type, limit_total_scenarios, timestamp_threshold_s, ego_displacement_minimum_m, \
            expand_scenarios, remove_invalid_goals, shuffle, ego_start_speed_threshold, ego_stop_speed_threshold, speed_noise_tolerance
 
-
+# 这段代码的核心作用是为自动驾驶仿真平台定义、配置和构建一套指标评估系统。它包括低层指标（如加速度、轨迹误差）和高层指标（如车道合规性、速度限制合规性等），并根据实验类型选择合适的指标集合。
+# 定义低层指标，用于评估自动驾驶系统的基本性能（如动力学特性、轨迹规划误差等）。
+# TODO
 def get_low_level_metrics():
     low_level_metrics = {
         'ego_acceleration': EgoAccelerationStatistics(name='ego_acceleration', category='Dynamics'),
@@ -274,9 +296,10 @@ def get_low_level_metrics():
     }
 
     return low_level_metrics
-
+# 定义高层指标，用于评估自动驾驶系统的整体性能（如合规性、安全性等）。
 def get_high_level_metrics(low_level_metrics):
     high_level_metrics = {
+        # 自车是否在可行驶区域内。
         'drivable_area_compliance': DrivableAreaComplianceStatistics(name='drivable_area_compliance',  category='Planning',
                                                                      lane_change_metric=low_level_metrics['ego_lane_change'],
                                                                      max_violation_threshold=0.3, metric_score_unit='bool'),
@@ -309,7 +332,8 @@ def get_high_level_metrics(low_level_metrics):
         'speed_limit_compliance': SpeedLimitComplianceStatistics(name='speed_limit_compliance', category='Violations', metric_score_unit='float', 
                                                      max_violation_threshold=1.0, max_overspeed_value_threshold=2.23, lane_change_metric=low_level_metrics['ego_lane_change'])
     }
-
+    # 通过低层指标的结果来构建高层指标
+    # 更新键值对
     high_level_metrics.update({
         'time_to_collision_within_bound': TimeToCollisionStatistics(name='time_to_collision_within_bound', category='Planning', metric_score_unit='bool',
                                                                     time_step_size=0.1, time_horizon=3.0, least_min_ttc=0.95,
@@ -318,9 +342,12 @@ def get_high_level_metrics(low_level_metrics):
 
     return high_level_metrics
 
-
+# 根据实验类型选择需要评估的指标集合。
 def get_metrics_config(experiment, low_level_metrics, high_level_metrics):
     if experiment == "open_loop_boxes":
+        # open_loop_boxes：
+        #     评估规划器与专家轨迹的误差。
+        #     偏向于轨迹规划性能的评估。
         metrics = [low_level_metrics['planner_expert_average_l2_error_within_bound'],
                    high_level_metrics['planner_expert_final_l2_error_within_bound'],
                    high_level_metrics['planner_miss_rate_within_bound'],
@@ -329,6 +356,9 @@ def get_metrics_config(experiment, low_level_metrics, high_level_metrics):
         ]
     
     elif experiment == 'closed_loop_nonreactive_agents' or experiment == 'closed_loop_reactive_agents':
+        # closed_loop_nonreactive_agents 和 closed_loop_reactive_agents：
+        #     评估动力学特性、合规性、安全性等。
+        #     偏向于自车在交互环境中的驾驶性能。
         metrics = [low_level_metrics['ego_lane_change'], low_level_metrics['ego_jerk'],
                    low_level_metrics['ego_lat_acceleration'], low_level_metrics['ego_lon_acceleration'],
                    low_level_metrics['ego_lon_jerk'], low_level_metrics['ego_yaw_acceleration'],
@@ -344,11 +374,13 @@ def get_metrics_config(experiment, low_level_metrics, high_level_metrics):
 
     return metrics
 
-
+# 根据实验类型构建指标引擎，用于评估仿真的结果。
 def build_metrics_engine(experiment, output_dir, metric_dir):
+    # 使用 pathlib 生成指标结果的保存路径。
     main_save_path = pathlib.Path(output_dir) / metric_dir
     low_level_metrics = get_low_level_metrics()
     high_level_metrics = get_high_level_metrics(low_level_metrics)
+    # TODO 选择要评估的指标
     selected_metrics = get_metrics_config(experiment, low_level_metrics, high_level_metrics)
 
     metric_engine = MetricsEngine(main_save_path=main_save_path)

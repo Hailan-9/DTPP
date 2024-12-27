@@ -1,8 +1,8 @@
 import math
 import numpy as np
 import bisect
-
-
+from debug_utils import *
+# 三次样条曲线插值
 class CubicSpline1D:
     """
     1D Cubic Spline class
@@ -35,6 +35,7 @@ class CubicSpline1D:
     def __init__(self, x, y):
 
         h = np.diff(x)
+        print_tensor_log(h, "np.diff(x)", DEBUG)
         if np.any(h < 0):
             raise ValueError("x coordinates must be sorted in ascending order")
 
@@ -153,7 +154,8 @@ class CubicSpline1D:
                 - 3.0 * (a[i + 1] - a[i]) / h[i]
         return B
 
-
+# 生成x y yaw curvature 
+# x(s) y(s) x y左边是弧长s的函数
 class CubicSpline2D:
     """
     Cubic CubicSpline2D class
@@ -251,6 +253,9 @@ class CubicSpline2D:
         k : float
             curvature for given s.
         """
+        # 曲率的参数方程
+        # x是弧长s的函数
+        # y也是弧长s的函数
         dx = self.sx.calc_first_derivative(s)
         ddx = self.sx.calc_second_derivative(s)
         dy = self.sy.calc_first_derivative(s)
@@ -276,7 +281,7 @@ class CubicSpline2D:
         yaw = math.atan2(dy, dx)
         return yaw
 
-
+# TODO 相邻path路径点直接相差0.1米
 def calc_spline_course(x, y, ds=0.1):
     sp = CubicSpline2D(x, y)
     s = list(np.arange(0, sp.s[-1], ds))

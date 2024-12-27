@@ -9,8 +9,14 @@ from nuplan.planning.training.preprocessing.utils.vector_preprocessing import in
 from nuplan.common.geometry.torch_geometry import vector_set_coordinates_to_local_frame
 from nuplan.planning.training.preprocessing.feature_builders.vector_builder_utils import *
 from nuplan.planning.training.preprocessing.utils.agents_preprocessing import *
+from debug_utils import *
+# TODO 这个模块的输入数据的预处理算法和逻辑是和数据预处理里面一样的
+# TODO 这个模块的输入数据的预处理算法和逻辑是和数据预处理里面一样的
+# TODO 这个模块的输入数据的预处理算法和逻辑是和数据预处理里面一样的
 
 
+# TODO 提取db数据并且预处理，作为encoder的输入
+# TODO route_roadblock_ids 路段的概念
 def observation_adapter(history_buffer, traffic_light_data, map_api, route_roadblock_ids, device='cpu'):
     num_agents = 20
     past_time_steps = 21
@@ -24,6 +30,7 @@ def observation_adapter(history_buffer, traffic_light_data, map_api, route_roadb
     observation_buffer = history_buffer.observation_buffer # Past observations including the current
 
     ego_agent_past = sampled_past_ego_states_to_tensor(ego_state_buffer)
+    # NOTE 时间是第一个维度
     past_tracked_objects_tensor_list, past_tracked_objects_types = sampled_tracked_objects_to_tensor_list(observation_buffer)
     time_stamps_past = sampled_past_timestamps_to_tensor([state.time_point for state in ego_state_buffer])
     ego_state = history_buffer.current_state[0]
@@ -184,7 +191,7 @@ def agent_past_process(past_ego_states, past_time_stamps, past_tracked_objects, 
     ego_tensor = convert_absolute_quantities_to_relative(ego_history, anchor_ego_state)
     agent_history = filter_agents_tensor(agents, reverse=True)
     agent_types = tracked_objects_types[-1]
-
+    # shape is：timesteps neighbor 轨迹
     if agent_history[-1].shape[0] == 0:
         # Return zero tensor when there are no agents in the scene
         agents_tensor = torch.zeros((len(agent_history), 0, agents_states_dim)).float()
@@ -260,7 +267,8 @@ def get_neighbor_vector_set_map(
             feature_layers.append(VectorFeatureLayer[feature_name])
         except KeyError:
             raise ValueError(f"Object representation for layer: {feature_name} is unavailable")
-
+    # NOTE Route 是全局的、抽象的，关注“去哪儿”和“怎么走”。
+    # NOTE Lanes 是局部的、具体的，关注“在哪条车道上行驶”。
     # extract lanes
     if VectorFeatureLayer.LANE in feature_layers:
         lanes_mid, lanes_left, lanes_right, lane_ids = get_lane_polylines(map_api, point, radius)
