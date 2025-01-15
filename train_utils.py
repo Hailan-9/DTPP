@@ -130,6 +130,7 @@ def calc_loss(neighbors, ego, ego_regularization, scores, weights, ego_gt, neigh
     print_tensor_shape_log(label, "label", DEBUG)
     irl_loss = F.cross_entropy(scores, label)
     # 计算权重的平方的均值，这是一种正则化项，用于防止模型过拟合。
+    # NOTE https://sider.ai/share/d3b01c7f9747292f00120e1e84501c69
     weights_regularization = torch.square(weights).mean()
     # 标量
     loss = cmp_loss + irl_loss + 0.1 * regularization_loss + 0.01 * weights_regularization

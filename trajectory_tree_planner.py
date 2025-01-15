@@ -481,6 +481,7 @@ class TreePlanner:
                 best_child_index = np.argmax(children_scores[parent])
 
         # get the best trajectory
+        # NOTE 从自车的轨迹树中，选择一个得分最高的轨迹作为自车的规划轨迹
         best_traj = best_parent.children[best_child_index].total_traj[1:, :3]
     
         # plot 

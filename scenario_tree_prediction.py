@@ -116,7 +116,7 @@ class Decoder(nn.Module):
         self.ego_traj_encoder = nn.Sequential(nn.Linear(6, 64), nn.ReLU(), nn.Linear(64, 256))
         # TAG agents 轨迹解码器，得到每一个agent的所有分支的轨迹
         self.agent_traj_decoder = AgentDecoder(max_time, max_branch, dim*2)
-        # TAG 
+        # TAG  自车轨迹解码器，得到自车的轨迹！！
         self.ego_traj_decoder = nn.Sequential(nn.Linear(256, 256), nn.ELU(), nn.Linear(256, max_time*10*3))
         self.scorer = ScoreDecoder(variable_cost)
 

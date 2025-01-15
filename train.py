@@ -60,6 +60,13 @@ def train_epoch(data_loader, encoder, decoder, optimizer):
             # scores： bt branch
             # ego：bt times 3
             # weights：bt 8
+            
+            # 输出：
+            #     neighbors_trajectories：邻居车辆的预测轨迹。
+            #     scores：预测轨迹的评分。
+            #     ego：自车的预测轨迹。
+            #     weights：预测的权重
+            # 8s 80个timesteps
             neighbors_trajectories, scores, ego, weights = \
                 decoder(encoder_outputs, first_stage_trajectory, inputs['neighbor_agents_past'], 30)
             print_tensor_shape_log(inputs['neighbor_agents_past'], "inputs['neighbor_agents_past']", DEBUG)

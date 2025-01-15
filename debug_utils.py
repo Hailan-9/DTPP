@@ -1,7 +1,7 @@
 import logging
 import torch
 import os
-DEBUG = True
+DEBUG = False
 DEBUG_CHECK = False
 log_path = f"./DTPP/training_log/"
 os.makedirs(log_path, exist_ok=True)
