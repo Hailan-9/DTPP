@@ -76,6 +76,7 @@ def train_epoch(data_loader, encoder, decoder, optimizer):
             print_tensor_shape_log(weights, "weights", DEBUG)
             loss = calc_loss(neighbors_trajectories, first_stage_trajectory, ego, scores, weights, \
                              ego_gt_future, neighbors_gt_future, neighbors_future_valid)
+            logging.info(f"first-stage loss is {loss} ")
             # second stage prediction 0~8s的轨迹
             second_stage_trajectory = batch[8].to(args.device)
             print_tensor_shape_log(second_stage_trajectory, "second_stage_trajectory", DEBUG)
@@ -88,8 +89,12 @@ def train_epoch(data_loader, encoder, decoder, optimizer):
             neighbors_trajectories, scores, ego, weights = \
                 decoder(encoder_outputs, second_stage_trajectory, inputs['neighbor_agents_past'], 80)
             # 论文第五页写到，考虑到闭环规划，第一阶段更重要，第二阶段没那么重要 所以系数分别是1.0 0.2
-            loss += 0.2 * calc_loss(neighbors_trajectories, second_stage_trajectory, ego, scores, weights, \
+            second_loss = calc_loss(neighbors_trajectories, second_stage_trajectory, ego, scores, weights, \
                               ego_gt_future, neighbors_gt_future, neighbors_future_valid)
+            loss += 0.2 * second_loss
+            logging.info(f"second-stage loss is {second_loss} ")
+            logging.info(f"total loss is {loss}")
+
             print_tensor_shape_log(first_stage_trajectory, "first_stage_trajectory", DEBUG)
             print_tensor_shape_log(second_stage_trajectory, "second_stage_trajectory", DEBUG)
 
@@ -166,14 +171,17 @@ def valid_epoch(data_loader, encoder, decoder):
                     decoder(encoder_outputs, first_stage_trajectory, inputs['neighbor_agents_past'], 30)
                 loss = calc_loss(neighbors_trajectories, first_stage_trajectory, ego, scores, weights, \
                                  ego_gt_future, neighbors_gt_future, neighbors_future_valid)
+                logging.info(f"first-stage loss is {loss} ")
 
                 # second stage prediction
                 second_stage_trajectory = batch[8].to(args.device)
                 neighbors_trajectories, scores, ego, weights = \
                     decoder(encoder_outputs, second_stage_trajectory, inputs['neighbor_agents_past'], 80)
-                loss += 0.2 * calc_loss(neighbors_trajectories, second_stage_trajectory, ego, scores, weights, \
+                second_loss = calc_loss(neighbors_trajectories, second_stage_trajectory, ego, scores, weights, \
                                   ego_gt_future, neighbors_gt_future, neighbors_future_valid)
- 
+                loss += 0.2 * second_loss
+                logging.info(f"second-stage loss is {second_loss} ")
+                logging.info(f"total loss is {loss}")
             # compute metrics
             metrics = calc_metrics(second_stage_trajectory, neighbors_trajectories, scores, \
                                    ego_gt_future, neighbors_gt_future, neighbors_future_valid)
@@ -194,7 +202,7 @@ def valid_epoch(data_loader, encoder, decoder):
 
 def model_training(args):
     # Logging
-    log_path = f"./DTPP/training_log/{args.name}/"
+    log_path = f"./training_log/{args.name}/"
     os.makedirs(log_path, exist_ok=True)
     # initLogging(log_file=log_path+'train.log')
 
@@ -244,6 +252,18 @@ def model_training(args):
     valid_loader = DataLoader(valid_set, batch_size=batch_size, num_workers=os.cpu_count())
     logging.info("Dataset Prepared: {} train data, {} validation data\n".format(len(train_set), len(valid_set)))
     
+
+    # checkpoint = torch.load('/home/action/zhangs_ws/DTPP/training_log/DTPP_training/2025-02-27_03-38-55_model_epoch_30_valADE_3.1573.pth')  
+    # # 恢复基础状态  
+    # encoder.load_state_dict(checkpoint['encoder'])  
+    # decoder.load_state_dict(checkpoint['decoder'])  
+    # # ego_final_decoder.load_state_dict(checkpoint['ego_final_decoder'])  
+    # # nn_planner.load_state_dict(checkpoint['nn_planner'])  
+    # # score_evaluation.load_state_dict(checkpoint['score_evaluation'])
+
+    # # optimizer.load_state_dict(checkpoint['optimizer_state_dict'])  
+    # # scheduler.load_state_dict(checkpoint['scheduler_state_dict'])
+
     # begin training
     for epoch in range(train_epochs):
         logging.info(f"Epoch {epoch+1}/{train_epochs}")
@@ -276,7 +296,9 @@ def model_training(args):
         # save model at the end of epoch
         # 提取编码器（encoder）的所有参数，返回一个字典，键是参数的名称，值是参数的张量（Tensor）。
         model = {'encoder': encoder.state_dict(), 'decoder': decoder.state_dict()}
-        torch.save(model, f'training_log/{args.name}/model_epoch_{epoch+1}_valADE_{val_metrics[0]:.4f}.pth')
+        current_time = datetime.datetime.now()
+        formatted_time = current_time.strftime("%Y-%m-%d_%H-%M-%S")
+        torch.save(model, f'training_log/{args.name}/{formatted_time}_model_epoch_{epoch+1}_valADE_{val_metrics[0]:.4f}.pth')
         logging.info(f"Model saved in training_log/{args.name}\n")
 
 

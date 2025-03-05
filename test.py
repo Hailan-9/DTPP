@@ -6,6 +6,7 @@ import warnings
 from tqdm import tqdm
 from planner import Planner
 from common_utils import *
+from debug_utils import *
 warnings.filterwarnings("ignore") 
 
 from nuplan.planning.simulation.planner.idm_planner import IDMPlanner
@@ -190,7 +191,7 @@ def build_nuboard(scenario_builder, simulation_path):
         nuboard_paths=simulation_path,
         scenario_builder=scenario_builder,
         vehicle_parameters=get_pacifica_parameters(),
-        port_number=5006
+        port_number=5106
     )
 
     nuboard.run()
@@ -199,7 +200,10 @@ def build_nuboard(scenario_builder, simulation_path):
 def main(args):
     # parameters
     experiment_name = args.test_type  # [open_loop_boxes, closed_loop_nonreactive_agents, closed_loop_reactive_agents]
-    job_name = 'DTPP_planner'
+    pth_name = os.path.basename(args.model_path)
+    logging.info(f"pth is {pth_name}")
+
+    job_name = 'DTPP_planner' + "_" + pth_name
     experiment_time = datetime.datetime.now()
     experiment = f"{experiment_name}/{job_name}/{experiment_time}"  
     # NOTE 和时间有关，每次实验的结果不会相互覆盖
@@ -248,7 +252,7 @@ def main(args):
     #     如果指定了 --load_test_set，则从 test_scenario.yaml 文件加载过滤参数。
     #     否则，使用默认的过滤参数（get_filter_parameters）。
     if args.load_test_set:
-        params = yaml.safe_load(open('DTPP/test_scenario.yaml', 'r'))
+        params = yaml.safe_load(open('./test_scenario.yaml', 'r'))
         # NOTE **params是Python的解包操作符，它将字典params中的键值对作为关键字参数传递给ScenarioFilter类的构造函数。
         scenario_filter = ScenarioFilter(**params)
     else:

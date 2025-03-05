@@ -170,7 +170,7 @@ class DataProcessor(object):
             block = self.map_api.get_map_object(id_, SemanticMapLayer.ROADBLOCK)
             # 左边真，则返回左边的值，否则，返回右边的值
             block = block or self.map_api.get_map_object(id_, SemanticMapLayer.ROADBLOCK_CONNECTOR)
-            print(f'hailan------------------block type is {type(block)}')
+            # print(f'hailan------------------block type is {type(block)}')
             route_roadblocks.append(block)
         # TODO 嵌套列表推导式 每一个导航路段的内部边的ids！！！！！
         # TODO 候选车道边ids
@@ -322,6 +322,7 @@ class DataProcessor(object):
                 first_stage_trajs, second_stage_trajs = self.get_ego_candidate_trajectories()
             except:
                 print(f"Error in {map_name}_{token}")
+                logging.info(f"Error in {map_name}_{token}")
                 continue
 
             # check if the candidate trajectories are valid
@@ -338,6 +339,7 @@ class DataProcessor(object):
                                             - second_stage_trajs[:, -1, :2], axis=-1)       
             # TODO 判断是否构建出一个有效的数据
             if np.min(expert_error_1) > 1.5 and np.min(expert_error_2) > 4:
+                logging.info(f"Error in {map_name}_{token} reason is valid data")
                 continue
             
             # sort the candidate trajectories

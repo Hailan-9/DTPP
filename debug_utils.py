@@ -1,13 +1,16 @@
 import logging
 import torch
+import datetime
 import os
 DEBUG = False
 DEBUG_CHECK = False
-log_path = f"./DTPP/training_log/"
+log_path = f"./training_log/"
 os.makedirs(log_path, exist_ok=True)
 # 配置日志  log_path+'train.log
+current_time = datetime.datetime.now()
+formatted_time = current_time.strftime("%Y-%m-%d_%H-%M-%S")
 logging.basicConfig(
-    filename=log_path+'DTPP_train_debug.log',  # 输出日志的文件名  
+    filename=f"{log_path}/{formatted_time}_DTPP_train_debug.log",  # 输出日志的文件名  
     level=logging.DEBUG,   # 设置日志级别为 DEBUG  
     # format='%(asctime)s - %(levelname)s - %(message)s'  # 日志格式  
     format='%(asctime)s - %(filename)s - line:%(lineno)d - %(levelname)s - %(message)s'  

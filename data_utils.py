@@ -359,7 +359,7 @@ def convert_feature_layer_to_fixed_size(ego_pose, feature_coords, feature_tl_dat
         # 分别是index value
         dist = torch.norm(e - ego_pose[None, :2], dim=-1).min()
         mapping[i] = dist
-        print(f"11111111type is {dist}   {type(dist)}")
+        # print(f"11111111type is {dist}   {type(dist)}")
     # NOTE mapping 变成了一个列表，列表中的每个元素都是一个元组，元组中包含了原始字典的键和值。(idx tensor)
     mapping = sorted(mapping.items(), key=lambda item: item[1])
     # 只取前max_element个最近的地图元素
@@ -463,7 +463,7 @@ def get_neighbor_vector_set_map(
             )
             # TODO 人行横道
             coords[feature_layer.name] = polygons
-            print(f'hailan-data_utils--------feature_layer.name is : {feature_layer.name}')
+            # print(f'hailan-data_utils--------feature_layer.name is : {feature_layer.name}')
 
     return coords, traffic_light_data
 
@@ -493,7 +493,7 @@ def map_process(anchor_state, coords, traffic_light_data, map_features, max_elem
             # NOTE element_coords也是一个列表
             list_feature_coords.append(torch.tensor(element_coords, dtype=torch.float32))
         list_tensor_data[f"coords.{feature_name}"] = list_feature_coords
-        print(f'hailan---data_utils------coords.feature_name is : {feature_name}')
+        # print(f'hailan---data_utils------coords.feature_name is : {feature_name}')
 
         # Pack traffic light data into tensor list if it exists
         if feature_name in traffic_light_data:
@@ -503,7 +503,7 @@ def map_process(anchor_state, coords, traffic_light_data, map_features, max_elem
                 # NOTE element_tl_data也是一个列表
                 list_feature_tl_data.append(torch.tensor(element_tl_data, dtype=torch.float32))
             list_tensor_data[f"traffic_light_data.{feature_name}"] = list_feature_tl_data
-            print(f'hailan---data_utils------coords.traffic_light_data is : {feature_name}')
+            # print(f'hailan---data_utils------coords.traffic_light_data is : {feature_name}')
 
 
     """
